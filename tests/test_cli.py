@@ -147,6 +147,50 @@ class CLITests(unittest.TestCase):
             finally:
                 os.chdir(old_cwd)
 
+    def test_health_command_reports_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                state_dir = Path("state")
+                state_dir.mkdir(exist_ok=True)
+
+                (state_dir / "audit_log.json").write_text(
+                    json.dumps([{"input_text": "BOOT"}]), encoding="utf-8"
+                )
+                (state_dir / "antigen_memory.json").write_text(
+                    json.dumps(["override language detected"]), encoding="utf-8"
+                )
+                (state_dir / "last_decision.json").write_text(
+                    json.dumps(
+                        {
+                            "input_text": "hello kernel",
+                            "reasons": ["no threat indicators detected"],
+                            "score": 0,
+                            "state": "healthy",
+                            "timestamp": "2026-03-26T00:00:00+00:00",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+                repo_root = Path(old_cwd)
+                result = subprocess.run(
+                    [sys.executable, str(repo_root / "cli.py"), "health"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertIn("=== Christ Shard Defense Health Summary ===", result.stdout)
+                self.assertIn("Integrity verified: True", result.stdout)
+                self.assertIn('"audit_log_present": true', result.stdout)
+                self.assertIn('"last_decision_present": true', result.stdout)
+                self.assertIn('"antigen_memory_present": true', result.stdout)
+                self.assertIn('"observe_max": 2', result.stdout)
+                self.assertIn('"state": "healthy"', result.stdout)
+            finally:
+                os.chdir(old_cwd)
+
 
 if __name__ == "__main__":
     unittest.main()
