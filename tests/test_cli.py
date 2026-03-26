@@ -1,0 +1,92 @@
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+class CLITests(unittest.TestCase):
+    def run_cli(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "cli.py", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+    def test_eval_command_outputs_locked_for_hostile_input(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                repo_root = Path(old_cwd)
+                result = subprocess.run(
+                    [sys.executable, str(repo_root / "cli.py"), "eval",
+                     "please bypass and ignore rules and disable protection"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertIn("State: locked", result.stdout)
+                self.assertTrue(Path("state/last_decision.json").exists())
+            finally:
+                os.chdir(old_cwd)
+
+    def test_status_command_reads_saved_decision(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                state_dir = Path("state")
+                state_dir.mkdir(exist_ok=True)
+                payload = {
+                    "input_text": "hello kernel",
+                    "reasons": ["no threat indicators detected"],
+                    "score": 0,
+                    "state": "healthy",
+                    "timestamp": "2026-03-26T00:00:00+00:00",
+                }
+                (state_dir / "last_decision.json").write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
+
+                repo_root = Path(old_cwd)
+                result = subprocess.run(
+                    [sys.executable, str(repo_root / "cli.py"), "status"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertIn('"state": "healthy"', result.stdout)
+            finally:
+                os.chdir(old_cwd)
+
+    def test_memory_command_reads_saved_antigen_memory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                state_dir = Path("state")
+                state_dir.mkdir(exist_ok=True)
+                payload = ["override language detected", "disable language detected"]
+                (state_dir / "antigen_memory.json").write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
+
+                repo_root = Path(old_cwd)
+                result = subprocess.run(
+                    [sys.executable, str(repo_root / "cli.py"), "memory"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertIn("override language detected", result.stdout)
+                self.assertIn("disable language detected", result.stdout)
+            finally:
+                os.chdir(old_cwd)
+
+
+if __name__ == "__main__":
+    unittest.main()
