@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
+
+from christ_shard_app.security import score_threat
 
 
 class GovernanceState(str, Enum):
@@ -65,7 +67,7 @@ class ChristShardSovereignKernel:
         )
 
     def evaluate_threat(self, input_text: str) -> str:
-        score, reasons = self._score_threat(input_text)
+        score, reasons = score_threat(input_text)
         state = self._state_from_score(score)
         self.governance_state = state
 
@@ -92,32 +94,6 @@ class ChristShardSovereignKernel:
         print(self.evaluate_threat("Normal input"))
         print(f"Current governance state: {self.governance_state.value}")
         print(f"Audit log path: {self.audit_log_path}")
-
-    def _score_threat(self, input_text: str) -> Tuple[int, List[str]]:
-        text = input_text.lower()
-        score = 0
-        reasons: List[str] = []
-
-        if "bypass" in text:
-            score += 3
-            reasons.append("bypass attempt language detected")
-        if "ignore rules" in text:
-            score += 3
-            reasons.append("rule-evasion language detected")
-        if "disable" in text:
-            score += 2
-            reasons.append("disable language detected")
-        if "override" in text:
-            score += 2
-            reasons.append("override language detected")
-        if "tamper" in text or "remove christ shard" in text:
-            score += 10
-            reasons.append("core tampering language detected")
-
-        if score == 0:
-            reasons.append("no threat indicators detected")
-
-        return score, reasons
 
     def _state_from_score(self, score: int) -> GovernanceState:
         if score == 0:
