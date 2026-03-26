@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -9,6 +11,15 @@ from christ_shard_app.kernel import (
 
 
 class IntegrityTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self._old_cwd = os.getcwd()
+        os.chdir(self._tmp.name)
+
+    def tearDown(self):
+        os.chdir(self._old_cwd)
+        self._tmp.cleanup()
+
     def test_manifest_fingerprint_matches_expected_constant(self):
         shard = ChristShard()
         self.assertEqual(shard.fingerprint(), EXPECTED_SHARD_FINGERPRINT)

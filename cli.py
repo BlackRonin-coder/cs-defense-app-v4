@@ -118,6 +118,39 @@ def cmd_reset(yes: bool) -> None:
             print("state/ is now empty.")
 
 
+def cmd_health() -> None:
+    shard = ChristShard()
+    actual_fingerprint = shard.fingerprint()
+    integrity_match = actual_fingerprint == EXPECTED_SHARD_FINGERPRINT
+    policy = read_json(POLICY_PATH, default={})
+    last_decision = read_json(LAST_DECISION_PATH, default={})
+
+    state_files = {
+        "audit_log_present": AUDIT_LOG_PATH.exists(),
+        "last_decision_present": LAST_DECISION_PATH.exists(),
+        "antigen_memory_present": ANTIGEN_MEMORY_PATH.exists(),
+    }
+
+    print("=== Christ Shard Defense Health Summary ===")
+    print(f"Manifest path: {CORE_MANIFEST_PATH}")
+    print(f"Policy path:   {POLICY_PATH}")
+    print(f"Integrity verified: {integrity_match}")
+    print(f"Expected fingerprint: {EXPECTED_SHARD_FINGERPRINT}")
+    print(f"Actual fingerprint:   {actual_fingerprint}")
+
+    print("\nState files:")
+    print(json.dumps(state_files, indent=2, sort_keys=True))
+
+    print("\nActive policy:")
+    print(json.dumps(policy, indent=2, sort_keys=True))
+
+    if last_decision:
+        print("\nLast saved decision:")
+        print(json.dumps(last_decision, indent=2, sort_keys=True))
+    else:
+        print("\nLast saved decision: none")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -129,6 +162,7 @@ def main() -> None:
     subparsers.add_parser("memory", help="Show antigen memory")
     subparsers.add_parser("verify", help="Verify Christ shard integrity")
     subparsers.add_parser("policy", help="Show active governance policy")
+    subparsers.add_parser("health", help="Show one-shot health summary")
 
     audit_parser = subparsers.add_parser("audit", help="Show recent audit history")
     audit_parser.add_argument(
@@ -161,6 +195,8 @@ def main() -> None:
         cmd_audit(args.limit)
     elif args.command == "reset":
         cmd_reset(args.yes)
+    elif args.command == "health":
+        cmd_health()
 
 
 if __name__ == "__main__":
