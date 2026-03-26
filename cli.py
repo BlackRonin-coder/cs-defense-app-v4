@@ -7,6 +7,7 @@ from pathlib import Path
 from christ_shard_app.kernel import (
     CORE_MANIFEST_PATH,
     EXPECTED_SHARD_FINGERPRINT,
+    POLICY_PATH,
     ChristShard,
     ChristShardSovereignKernel,
 )
@@ -61,6 +62,13 @@ def cmd_verify() -> None:
         print("Integrity status: MISMATCH")
 
 
+def cmd_policy() -> None:
+    policy = read_json(POLICY_PATH, default={})
+    print("=== Active Governance Policy ===")
+    print(f"Policy path: {POLICY_PATH}")
+    print(json.dumps(policy, indent=2, sort_keys=True))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -71,6 +79,7 @@ def main() -> None:
     subparsers.add_parser("status", help="Show last saved decision")
     subparsers.add_parser("memory", help="Show antigen memory")
     subparsers.add_parser("verify", help="Verify Christ shard integrity")
+    subparsers.add_parser("policy", help="Show active governance policy")
 
     args = parser.parse_args()
 
@@ -82,6 +91,8 @@ def main() -> None:
         cmd_memory()
     elif args.command == "verify":
         cmd_verify()
+    elif args.command == "policy":
+        cmd_policy()
 
 
 if __name__ == "__main__":
