@@ -4,7 +4,12 @@ import argparse
 import json
 from pathlib import Path
 
-from christ_shard_app.kernel import ChristShardSovereignKernel
+from christ_shard_app.kernel import (
+    CORE_MANIFEST_PATH,
+    EXPECTED_SHARD_FINGERPRINT,
+    ChristShard,
+    ChristShardSovereignKernel,
+)
 from christ_shard_app.storage import read_json
 
 
@@ -39,6 +44,23 @@ def cmd_memory() -> None:
     print(json.dumps(memory, indent=2, sort_keys=True))
 
 
+def cmd_verify() -> None:
+    shard = ChristShard()
+    actual_fingerprint = shard.fingerprint()
+    match = actual_fingerprint == EXPECTED_SHARD_FINGERPRINT
+
+    print("=== Christ Shard Integrity Verification ===")
+    print(f"Manifest path: {CORE_MANIFEST_PATH}")
+    print(f"Expected fingerprint: {EXPECTED_SHARD_FINGERPRINT}")
+    print(f"Actual fingerprint:   {actual_fingerprint}")
+    print(f"Integrity match:      {match}")
+
+    if match:
+        print("Integrity status: VERIFIED")
+    else:
+        print("Integrity status: MISMATCH")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -48,6 +70,7 @@ def main() -> None:
 
     subparsers.add_parser("status", help="Show last saved decision")
     subparsers.add_parser("memory", help="Show antigen memory")
+    subparsers.add_parser("verify", help="Verify Christ shard integrity")
 
     args = parser.parse_args()
 
@@ -57,6 +80,8 @@ def main() -> None:
         cmd_status()
     elif args.command == "memory":
         cmd_memory()
+    elif args.command == "verify":
+        cmd_verify()
 
 
 if __name__ == "__main__":
