@@ -14,6 +14,13 @@ from christ_shard_app.storage import read_json, write_json
 
 EXPECTED_SHARD_FINGERPRINT = "1e85672296789284062d4707a38bb005071d7a4925832e45cd88c18a7c0ef271"
 CORE_MANIFEST_PATH = Path(__file__).with_name("core_manifest.json")
+POLICY_PATH = Path(__file__).with_name("policy.json")
+
+DEFAULT_POLICY = {
+    "observe_max": 2,
+    "sandbox_max": 4,
+    "locked_max": 8,
+}
 
 
 class GovernanceState(str, Enum):
@@ -48,6 +55,7 @@ class ChristShard:
 class ChristShardSovereignKernel:
     def __init__(self) -> None:
         self.shard = ChristShard()
+        self.policy = self._load_policy()
         self.governance_state = GovernanceState.HEALTHY
         self.equilibrium_score = 1.0
 
@@ -120,18 +128,35 @@ class ChristShardSovereignKernel:
         print("Running protected demo...")
         print(self.evaluate_threat("Normal input"))
         print(f"Current governance state: {self.governance_state.value}")
+        print(f"Policy path: {POLICY_PATH}")
         print(f"Audit log path: {self.audit_log_path}")
         print(f"Last decision path: {self.last_decision_path}")
         print(f"Antigen memory path: {self.antigen_memory_path}")
 
+    def _load_policy(self) -> dict:
+        loaded = read_json(POLICY_PATH, default=DEFAULT_POLICY)
+        if not isinstance(loaded, dict):
+            raise RuntimeError("Governance policy file is invalid")
+
+        policy = {
+            "observe_max": int(loaded.get("observe_max", DEFAULT_POLICY["observe_max"])),
+            "sandbox_max": int(loaded.get("sandbox_max", DEFAULT_POLICY["sandbox_max"])),
+            "locked_max": int(loaded.get("locked_max", DEFAULT_POLICY["locked_max"])),
+        }
+
+        if not (0 < policy["observe_max"] <= policy["sandbox_max"] <= policy["locked_max"]):
+            raise RuntimeError("Governance policy thresholds are invalid")
+
+        return policy
+
     def _state_from_score(self, score: int) -> GovernanceState:
         if score == 0:
             return GovernanceState.HEALTHY
-        if score <= 2:
+        if score <= self.policy["observe_max"]:
             return GovernanceState.OBSERVE
-        if score <= 4:
+        if score <= self.policy["sandbox_max"]:
             return GovernanceState.SANDBOX
-        if score <= 8:
+        if score <= self.policy["locked_max"]:
             return GovernanceState.LOCKED
         return GovernanceState.SHUTDOWN
 
