@@ -83,6 +83,41 @@ def cmd_audit(limit: int) -> None:
     print(json.dumps(shown, indent=2, sort_keys=True))
 
 
+def cmd_reset(yes: bool) -> None:
+    if not yes:
+        print("Reset aborted. Re-run with: python3 cli.py reset --yes")
+        return
+
+    targets = [
+        AUDIT_LOG_PATH,
+        LAST_DECISION_PATH,
+        ANTIGEN_MEMORY_PATH,
+    ]
+
+    removed = []
+    for path in targets:
+        if path.exists():
+            path.unlink()
+            removed.append(str(path))
+
+    print("=== Runtime State Reset ===")
+    if removed:
+        print("Removed:")
+        for item in removed:
+            print(f"- {item}")
+    else:
+        print("No runtime state files were present.")
+
+    if STATE_DIR.exists():
+        remaining = sorted(p.name for p in STATE_DIR.iterdir())
+        if remaining:
+            print("Remaining files in state/:")
+            for name in remaining:
+                print(f"- {name}")
+        else:
+            print("state/ is now empty.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -103,6 +138,13 @@ def main() -> None:
         help="Number of most recent audit events to show",
     )
 
+    reset_parser = subparsers.add_parser("reset", help="Clear runtime state files")
+    reset_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm runtime state reset",
+    )
+
     args = parser.parse_args()
 
     if args.command == "eval":
@@ -117,6 +159,8 @@ def main() -> None:
         cmd_policy()
     elif args.command == "audit":
         cmd_audit(args.limit)
+    elif args.command == "reset":
+        cmd_reset(args.yes)
 
 
 if __name__ == "__main__":
