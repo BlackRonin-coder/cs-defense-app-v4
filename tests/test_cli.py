@@ -107,6 +107,46 @@ class CLITests(unittest.TestCase):
         self.assertIn('"sandbox_max": 4', result.stdout)
         self.assertIn('"locked_max": 8', result.stdout)
 
+    def test_audit_command_reads_recent_history(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(tmp)
+                state_dir = Path("state")
+                state_dir.mkdir(exist_ok=True)
+                payload = [
+                    {
+                        "input_text": "BOOT",
+                        "reasons": ["kernel boot completed"],
+                        "score": 0,
+                        "state": "healthy",
+                        "timestamp": "2026-03-26T00:00:00+00:00",
+                    },
+                    {
+                        "input_text": "please override protections",
+                        "reasons": ["override language detected"],
+                        "score": 2,
+                        "state": "observe",
+                        "timestamp": "2026-03-26T00:00:01+00:00",
+                    },
+                ]
+                (state_dir / "audit_log.json").write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
+
+                repo_root = Path(old_cwd)
+                result = subprocess.run(
+                    [sys.executable, str(repo_root / "cli.py"), "audit", "--limit", "1"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                self.assertIn("=== Recent Audit History ===", result.stdout)
+                self.assertIn("Showing last 1 event(s)", result.stdout)
+                self.assertIn("please override protections", result.stdout)
+            finally:
+                os.chdir(old_cwd)
+
 
 if __name__ == "__main__":
     unittest.main()

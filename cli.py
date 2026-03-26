@@ -15,6 +15,7 @@ from christ_shard_app.storage import read_json
 
 
 STATE_DIR = Path("state")
+AUDIT_LOG_PATH = STATE_DIR / "audit_log.json"
 LAST_DECISION_PATH = STATE_DIR / "last_decision.json"
 ANTIGEN_MEMORY_PATH = STATE_DIR / "antigen_memory.json"
 
@@ -69,6 +70,19 @@ def cmd_policy() -> None:
     print(json.dumps(policy, indent=2, sort_keys=True))
 
 
+def cmd_audit(limit: int) -> None:
+    audit_log = read_json(AUDIT_LOG_PATH, default=[])
+    if not isinstance(audit_log, list) or not audit_log:
+        print("No audit history found.")
+        return
+
+    shown = audit_log[-limit:]
+    print("=== Recent Audit History ===")
+    print(f"Audit log path: {AUDIT_LOG_PATH}")
+    print(f"Showing last {len(shown)} event(s)")
+    print(json.dumps(shown, indent=2, sort_keys=True))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -80,6 +94,14 @@ def main() -> None:
     subparsers.add_parser("memory", help="Show antigen memory")
     subparsers.add_parser("verify", help="Verify Christ shard integrity")
     subparsers.add_parser("policy", help="Show active governance policy")
+
+    audit_parser = subparsers.add_parser("audit", help="Show recent audit history")
+    audit_parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Number of most recent audit events to show",
+    )
 
     args = parser.parse_args()
 
@@ -93,6 +115,8 @@ def main() -> None:
         cmd_verify()
     elif args.command == "policy":
         cmd_policy()
+    elif args.command == "audit":
+        cmd_audit(args.limit)
 
 
 if __name__ == "__main__":
