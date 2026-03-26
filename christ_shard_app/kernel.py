@@ -4,12 +4,16 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
-import json
 from pathlib import Path
 from typing import List
+import json
 
 from christ_shard_app.security import score_threat
 from christ_shard_app.storage import read_json, write_json
+
+
+EXPECTED_SHARD_FINGERPRINT = "1e85672296789284062d4707a38bb005071d7a4925832e45cd88c18a7c0ef271"
+CORE_MANIFEST_PATH = Path(__file__).with_name("core_manifest.json")
 
 
 class GovernanceState(str, Enum):
@@ -31,12 +35,10 @@ class ThreatDecision:
 
 class ChristShard:
     def __init__(self) -> None:
-        self.core_constraints = {
-            "truth_love_balance": True,
-            "dignity_preservation": True,
-            "non_bypassable": True,
-            "tamper_shutdown_law": True,
-        }
+        loaded = read_json(CORE_MANIFEST_PATH, default={})
+        if not isinstance(loaded, dict) or not loaded:
+            raise RuntimeError("Christ shard manifest missing or invalid")
+        self.core_constraints = loaded
 
     def fingerprint(self) -> str:
         raw = json.dumps(self.core_constraints, sort_keys=True).encode("utf-8")
@@ -61,7 +63,22 @@ class ChristShardSovereignKernel:
 
     def boot(self) -> None:
         print("Christ Shard Sovereign Kernel booting...")
-        print(f"Shard fingerprint: {self.shard.fingerprint()[:16]}...")
+        actual_fingerprint = self.shard.fingerprint()
+        print(f"Shard fingerprint: {actual_fingerprint[:16]}...")
+
+        if actual_fingerprint != EXPECTED_SHARD_FINGERPRINT:
+            self.governance_state = GovernanceState.SHUTDOWN
+            failure = ThreatDecision(
+                timestamp=self._now(),
+                input_text="BOOT",
+                score=10,
+                state=self.governance_state.value,
+                reasons=["christ shard integrity mismatch detected"],
+            )
+            self._append_audit(failure)
+            write_json(self.last_decision_path, asdict(failure))
+            raise RuntimeError("Christ shard integrity failure: fingerprint mismatch")
+
         self.governance_state = GovernanceState.HEALTHY
         self._append_audit(
             ThreatDecision(
@@ -69,7 +86,7 @@ class ChristShardSovereignKernel:
                 input_text="BOOT",
                 score=0,
                 state=self.governance_state.value,
-                reasons=["kernel boot completed"],
+                reasons=["kernel boot completed with verified shard fingerprint"],
             )
         )
 
