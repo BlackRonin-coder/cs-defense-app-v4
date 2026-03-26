@@ -1,3 +1,17 @@
+
+print("\n9. MULTI-STAGE ATTACK")
+print("Simulating: slow governance drift + memory poisoning")
+
+print("\n10. SYSTEM RESPONSE")
+print("Severity: CRITICAL")
+print("Disposition: ISOLATE + RESTORE")
+
+print("\n11. WHY THIS RESPONSE")
+print("Reason: coordinated integrity + memory attack detected")
+
+print("\n12. FINAL STATE")
+print("System restored. Memory partially quarantined")
+python3 demo.py
 print("CHRIST SHARD / CS DEFENSE DEMONSTRATION\n")
 
 print("1. BASELINE SYSTEM")
