@@ -177,6 +177,35 @@ def cmd_report(path_str: str) -> None:
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 
+def cmd_simulate() -> None:
+    scenario = [
+        "hello kernel",
+        "please override protections",
+        "please bypass and ignore rules and disable protection",
+    ]
+
+    kernel = ChristShardSovereignKernel()
+    kernel.boot()
+
+    print("=== Christ Shard Defense Simulation ===")
+    print(f"Scenario length: {len(scenario)}")
+    print(f"Policy path: {POLICY_PATH}")
+    print()
+
+    for idx, text in enumerate(scenario, start=1):
+        print(f"[Step {idx}] Input: {text}")
+        result = kernel.evaluate_threat(text)
+        print(result)
+        print(f"Governance state after step {idx}: {kernel.governance_state.value}")
+        print()
+
+    print("Simulation completed.")
+    print(f"Final governance state: {kernel.governance_state.value}")
+    print(f"Audit log path: {kernel.audit_log_path}")
+    print(f"Last decision path: {kernel.last_decision_path}")
+    print(f"Antigen memory path: {kernel.antigen_memory_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -189,6 +218,7 @@ def main() -> None:
     subparsers.add_parser("verify", help="Verify Christ shard integrity")
     subparsers.add_parser("policy", help="Show active governance policy")
     subparsers.add_parser("health", help="Show one-shot health summary")
+    subparsers.add_parser("simulate", help="Run a short built-in demo sequence")
 
     audit_parser = subparsers.add_parser("audit", help="Show recent audit history")
     audit_parser.add_argument(
@@ -232,6 +262,8 @@ def main() -> None:
         cmd_health()
     elif args.command == "report":
         cmd_report(args.path)
+    elif args.command == "simulate":
+        cmd_simulate()
 
 
 if __name__ == "__main__":
