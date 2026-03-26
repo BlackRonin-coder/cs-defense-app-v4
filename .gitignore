@@ -1,0 +1,5 @@
+state/
+extracted/
+*.zip
+__pycache__/
+*.pyc
