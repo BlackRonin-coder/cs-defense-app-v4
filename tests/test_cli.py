@@ -94,6 +94,19 @@ class CLITests(unittest.TestCase):
         self.assertIn("Integrity status: VERIFIED", result.stdout)
         self.assertIn("Integrity match:      True", result.stdout)
 
+    def test_policy_command_reports_loaded_thresholds(self):
+        repo_root = Path.cwd()
+        result = subprocess.run(
+            [sys.executable, str(repo_root / "cli.py"), "policy"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertIn("=== Active Governance Policy ===", result.stdout)
+        self.assertIn('"observe_max": 2', result.stdout)
+        self.assertIn('"sandbox_max": 4', result.stdout)
+        self.assertIn('"locked_max": 8', result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
