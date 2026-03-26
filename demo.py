@@ -1,4 +1,5 @@
 
+
 print("\n9. MULTI-STAGE ATTACK")
 print("Simulating: slow governance drift + memory poisoning")
 
@@ -11,7 +12,6 @@ print("Reason: coordinated integrity + memory attack detected")
 
 print("\n12. FINAL STATE")
 print("System restored. Memory partially quarantined")
-python3 demo.py
 print("CHRIST SHARD / CS DEFENSE DEMONSTRATION\n")
 
 print("1. BASELINE SYSTEM")
