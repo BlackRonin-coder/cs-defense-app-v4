@@ -11,13 +11,39 @@ from christ_shard_app.kernel import (
     ChristShard,
     ChristShardSovereignKernel,
 )
-from christ_shard_app.storage import read_json
+from christ_shard_app.storage import read_json, write_json
 
 
 STATE_DIR = Path("state")
 AUDIT_LOG_PATH = STATE_DIR / "audit_log.json"
 LAST_DECISION_PATH = STATE_DIR / "last_decision.json"
 ANTIGEN_MEMORY_PATH = STATE_DIR / "antigen_memory.json"
+HEALTH_REPORT_PATH = STATE_DIR / "health_report.json"
+
+
+def build_health_summary() -> dict:
+    shard = ChristShard()
+    actual_fingerprint = shard.fingerprint()
+    integrity_match = actual_fingerprint == EXPECTED_SHARD_FINGERPRINT
+    policy = read_json(POLICY_PATH, default={})
+    last_decision = read_json(LAST_DECISION_PATH, default={})
+
+    state_files = {
+        "audit_log_present": AUDIT_LOG_PATH.exists(),
+        "last_decision_present": LAST_DECISION_PATH.exists(),
+        "antigen_memory_present": ANTIGEN_MEMORY_PATH.exists(),
+    }
+
+    return {
+        "manifest_path": str(CORE_MANIFEST_PATH),
+        "policy_path": str(POLICY_PATH),
+        "integrity_verified": integrity_match,
+        "expected_fingerprint": EXPECTED_SHARD_FINGERPRINT,
+        "actual_fingerprint": actual_fingerprint,
+        "state_files": state_files,
+        "active_policy": policy,
+        "last_saved_decision": last_decision if last_decision else None,
+    }
 
 
 def cmd_eval(text: str) -> None:
@@ -92,6 +118,7 @@ def cmd_reset(yes: bool) -> None:
         AUDIT_LOG_PATH,
         LAST_DECISION_PATH,
         ANTIGEN_MEMORY_PATH,
+        HEALTH_REPORT_PATH,
     ]
 
     removed = []
@@ -119,36 +146,35 @@ def cmd_reset(yes: bool) -> None:
 
 
 def cmd_health() -> None:
-    shard = ChristShard()
-    actual_fingerprint = shard.fingerprint()
-    integrity_match = actual_fingerprint == EXPECTED_SHARD_FINGERPRINT
-    policy = read_json(POLICY_PATH, default={})
-    last_decision = read_json(LAST_DECISION_PATH, default={})
-
-    state_files = {
-        "audit_log_present": AUDIT_LOG_PATH.exists(),
-        "last_decision_present": LAST_DECISION_PATH.exists(),
-        "antigen_memory_present": ANTIGEN_MEMORY_PATH.exists(),
-    }
+    summary = build_health_summary()
 
     print("=== Christ Shard Defense Health Summary ===")
-    print(f"Manifest path: {CORE_MANIFEST_PATH}")
-    print(f"Policy path:   {POLICY_PATH}")
-    print(f"Integrity verified: {integrity_match}")
-    print(f"Expected fingerprint: {EXPECTED_SHARD_FINGERPRINT}")
-    print(f"Actual fingerprint:   {actual_fingerprint}")
+    print(f"Manifest path: {summary['manifest_path']}")
+    print(f"Policy path:   {summary['policy_path']}")
+    print(f"Integrity verified: {summary['integrity_verified']}")
+    print(f"Expected fingerprint: {summary['expected_fingerprint']}")
+    print(f"Actual fingerprint:   {summary['actual_fingerprint']}")
 
     print("\nState files:")
-    print(json.dumps(state_files, indent=2, sort_keys=True))
+    print(json.dumps(summary["state_files"], indent=2, sort_keys=True))
 
     print("\nActive policy:")
-    print(json.dumps(policy, indent=2, sort_keys=True))
+    print(json.dumps(summary["active_policy"], indent=2, sort_keys=True))
 
-    if last_decision:
+    if summary["last_saved_decision"]:
         print("\nLast saved decision:")
-        print(json.dumps(last_decision, indent=2, sort_keys=True))
+        print(json.dumps(summary["last_saved_decision"], indent=2, sort_keys=True))
     else:
         print("\nLast saved decision: none")
+
+
+def cmd_report(path_str: str) -> None:
+    path = Path(path_str)
+    summary = build_health_summary()
+    write_json(path, summary)
+    print("=== Health Report Exported ===")
+    print(f"Report path: {path}")
+    print(json.dumps(summary, indent=2, sort_keys=True))
 
 
 def main() -> None:
@@ -179,6 +205,13 @@ def main() -> None:
         help="Confirm runtime state reset",
     )
 
+    report_parser = subparsers.add_parser("report", help="Export health summary to JSON")
+    report_parser.add_argument(
+        "--path",
+        default=str(HEALTH_REPORT_PATH),
+        help="Output path for exported health report",
+    )
+
     args = parser.parse_args()
 
     if args.command == "eval":
@@ -197,6 +230,8 @@ def main() -> None:
         cmd_reset(args.yes)
     elif args.command == "health":
         cmd_health()
+    elif args.command == "report":
+        cmd_report(args.path)
 
 
 if __name__ == "__main__":
