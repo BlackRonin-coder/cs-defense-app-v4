@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from enum import Enum
 from hashlib import sha256
+import json
 from pathlib import Path
 from typing import List
 
 from christ_shard_app.security import score_threat
+from christ_shard_app.storage import read_json, write_json
 
 
 class GovernanceState(str, Enum):
@@ -47,10 +48,16 @@ class ChristShardSovereignKernel:
         self.shard = ChristShard()
         self.governance_state = GovernanceState.HEALTHY
         self.equilibrium_score = 1.0
-        self.antigen_memory: List[str] = []
+
         self.state_dir = Path("state")
         self.state_dir.mkdir(exist_ok=True)
+
         self.audit_log_path = self.state_dir / "audit_log.json"
+        self.last_decision_path = self.state_dir / "last_decision.json"
+        self.antigen_memory_path = self.state_dir / "antigen_memory.json"
+
+        loaded_memory = read_json(self.antigen_memory_path, default=[])
+        self.antigen_memory: List[str] = loaded_memory if isinstance(loaded_memory, list) else []
 
     def boot(self) -> None:
         print("Christ Shard Sovereign Kernel booting...")
@@ -82,7 +89,10 @@ class ChristShardSovereignKernel:
             state=state.value,
             reasons=reasons,
         )
+
         self._append_audit(decision)
+        write_json(self.last_decision_path, asdict(decision))
+        write_json(self.antigen_memory_path, self.antigen_memory)
 
         return (
             f"Evaluated under Christ Shard protection. "
@@ -94,6 +104,8 @@ class ChristShardSovereignKernel:
         print(self.evaluate_threat("Normal input"))
         print(f"Current governance state: {self.governance_state.value}")
         print(f"Audit log path: {self.audit_log_path}")
+        print(f"Last decision path: {self.last_decision_path}")
+        print(f"Antigen memory path: {self.antigen_memory_path}")
 
     def _state_from_score(self, score: int) -> GovernanceState:
         if score == 0:
@@ -107,18 +119,12 @@ class ChristShardSovereignKernel:
         return GovernanceState.SHUTDOWN
 
     def _append_audit(self, decision: ThreatDecision) -> None:
-        existing = []
-        if self.audit_log_path.exists():
-            try:
-                existing = json.loads(self.audit_log_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                existing = []
+        existing = read_json(self.audit_log_path, default=[])
+        if not isinstance(existing, list):
+            existing = []
 
         existing.append(asdict(decision))
-        self.audit_log_path.write_text(
-            json.dumps(existing, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
+        write_json(self.audit_log_path, existing)
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat()

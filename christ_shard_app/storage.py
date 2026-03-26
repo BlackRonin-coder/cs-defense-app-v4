@@ -1,13 +1,22 @@
 from __future__ import annotations
+
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-def write_json(path: Path, payload: Dict[str, Any]) -> None:
+
+def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
-def read_json(path: Path, default: Dict[str, Any] | None = None) -> Dict[str, Any]:
+
+def read_json(path: Path, default: Any = None) -> Any:
     if not path.exists():
-        return {} if default is None else default
-    return json.loads(path.read_text(encoding="utf-8"))
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return default
