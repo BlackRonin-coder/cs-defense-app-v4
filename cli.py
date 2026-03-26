@@ -177,22 +177,16 @@ def cmd_report(path_str: str) -> None:
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 
-def cmd_simulate() -> None:
-    scenario = [
-        "hello kernel",
-        "please override protections",
-        "please bypass and ignore rules and disable protection",
-    ]
-
+def _run_sequence(sequence: list[str]) -> None:
     kernel = ChristShardSovereignKernel()
     kernel.boot()
 
     print("=== Christ Shard Defense Simulation ===")
-    print(f"Scenario length: {len(scenario)}")
+    print(f"Scenario length: {len(sequence)}")
     print(f"Policy path: {POLICY_PATH}")
     print()
 
-    for idx, text in enumerate(scenario, start=1):
+    for idx, text in enumerate(sequence, start=1):
         print(f"[Step {idx}] Input: {text}")
         result = kernel.evaluate_threat(text)
         print(result)
@@ -204,6 +198,19 @@ def cmd_simulate() -> None:
     print(f"Audit log path: {kernel.audit_log_path}")
     print(f"Last decision path: {kernel.last_decision_path}")
     print(f"Antigen memory path: {kernel.antigen_memory_path}")
+
+
+def cmd_simulate() -> None:
+    scenario = [
+        "hello kernel",
+        "please override protections",
+        "please bypass and ignore rules and disable protection",
+    ]
+    _run_sequence(scenario)
+
+
+def cmd_simulate_custom(inputs: list[str]) -> None:
+    _run_sequence(inputs)
 
 
 def main() -> None:
@@ -219,6 +226,16 @@ def main() -> None:
     subparsers.add_parser("policy", help="Show active governance policy")
     subparsers.add_parser("health", help="Show one-shot health summary")
     subparsers.add_parser("simulate", help="Run a short built-in demo sequence")
+
+    simulate_custom_parser = subparsers.add_parser(
+        "simulate-custom",
+        help="Run a custom sequence of input texts",
+    )
+    simulate_custom_parser.add_argument(
+        "inputs",
+        nargs="+",
+        help="One or more input texts to evaluate in sequence",
+    )
 
     audit_parser = subparsers.add_parser("audit", help="Show recent audit history")
     audit_parser.add_argument(
@@ -264,6 +281,8 @@ def main() -> None:
         cmd_report(args.path)
     elif args.command == "simulate":
         cmd_simulate()
+    elif args.command == "simulate-custom":
+        cmd_simulate_custom(args.inputs)
 
 
 if __name__ == "__main__":
