@@ -73,3 +73,43 @@ if __name__ == "__main__":
         ["probe_input", "modify_governance"],
         ["input_layer", "governance_layer"]
     ), indent=2))
+
+# === PERSISTENCE PATCH ===
+from christ_shard_app.persistence import load_memory, save_memory
+
+_original_init = AttackerProfiler.__init__
+
+def patched_init(self):
+    _original_init(self)
+    self.profiles = load_memory()
+
+AttackerProfiler.__init__ = patched_init
+
+_original_update = AttackerProfiler.update_profile
+
+def patched_update(self, actor_id, behaviours, targets):
+    profile = _original_update(self, actor_id, behaviours, targets)
+    save_memory(self.profiles)
+    return profile
+
+AttackerProfiler.update_profile = patched_update
+
+# === PERSISTENCE PATCH ===
+from christ_shard_app.persistence import load_memory, save_memory
+
+_original_init = AttackerProfiler.__init__
+
+def patched_init(self):
+    _original_init(self)
+    self.profiles = load_memory()
+
+AttackerProfiler.__init__ = patched_init
+
+_original_update = AttackerProfiler.update_profile
+
+def patched_update(self, actor_id, behaviours, targets):
+    profile = _original_update(self, actor_id, behaviours, targets)
+    save_memory(self.profiles)
+    return profile
+
+AttackerProfiler.update_profile = patched_update
