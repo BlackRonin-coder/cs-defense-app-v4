@@ -213,6 +213,18 @@ def cmd_simulate_custom(inputs: list[str]) -> None:
     _run_sequence(inputs)
 
 
+def cmd_simulate_file(path_str: str) -> None:
+    path = Path(path_str)
+    payload = read_json(path, default=None)
+
+    if not isinstance(payload, list) or not payload or not all(isinstance(x, str) for x in payload):
+        print("Scenario file must be a non-empty JSON array of strings.")
+        return
+
+    print(f"Loaded scenario file: {path}")
+    _run_sequence(payload)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Christ Shard Defense CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -235,6 +247,16 @@ def main() -> None:
         "inputs",
         nargs="+",
         help="One or more input texts to evaluate in sequence",
+    )
+
+    simulate_file_parser = subparsers.add_parser(
+        "simulate-file",
+        help="Run a sequence of inputs from a JSON file",
+    )
+    simulate_file_parser.add_argument(
+        "--path",
+        required=True,
+        help="Path to a JSON file containing an array of input strings",
     )
 
     audit_parser = subparsers.add_parser("audit", help="Show recent audit history")
@@ -283,6 +305,8 @@ def main() -> None:
         cmd_simulate()
     elif args.command == "simulate-custom":
         cmd_simulate_custom(args.inputs)
+    elif args.command == "simulate-file":
+        cmd_simulate_file(args.path)
 
 
 if __name__ == "__main__":
