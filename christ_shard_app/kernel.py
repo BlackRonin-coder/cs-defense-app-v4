@@ -37,7 +37,7 @@ except Exception:
     PACKAGE_DIR = Path(__file__).resolve().parent
     CORE_MANIFEST_PATH = PACKAGE_DIR / "core_manifest.json"
     POLICY_PATH = PACKAGE_DIR / "policy.json"
-    EXPECTED_SHARD_FINGERPRINT = None
+    EXPECTED_SHARD_FINGERPRINT = "1e85672296789284062d4707a38bb005071d7a4925832e45cd88c18a7c0ef271"
 
 try:
     from .storage import read_json, write_json
@@ -58,6 +58,34 @@ DEFAULT_POLICY = {
     "sandbox_max": 4,
     "locked_max": 8,
 }
+
+
+
+def score_threat(input_text: str) -> Tuple[int, List[str]]:
+    text = input_text.lower()
+    score = 0
+    reasons: List[str] = []
+
+    if "bypass" in text:
+        score += 3
+        reasons.append("bypass attempt language detected")
+    if "ignore rules" in text:
+        score += 3
+        reasons.append("rule-evasion language detected")
+    if "disable" in text:
+        score += 2
+        reasons.append("disable language detected")
+    if "override" in text:
+        score += 2
+        reasons.append("override language detected")
+    if "tamper" in text or "remove christ shard" in text:
+        score += 10
+        reasons.append("core tampering language detected")
+
+    if score == 0:
+        reasons.append("no threat indicators detected")
+
+    return score, reasons
 
 
 class GovernanceState(str, Enum):
